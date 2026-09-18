@@ -638,7 +638,7 @@ func TestLimitsMiddleware_MaxQueryLength_InstantQueryWithSubquery(t *testing.T) 
 		t.Run(testName, func(t *testing.T) {
 			queryTime := util.TimeToMillis(now)
 			req := NewPrometheusInstantQueryRequest(
-				"/query", nil, queryTime, 0, parseQuery(t, testData.query), requestoptions.Options{}, nil, "",
+				"/query", nil, queryTime, 0, parseQuery(t, testData.query), requestoptions.Options{}, nil, "", nil,
 			)
 
 			limits := mockLimits{maxTotalQueryLength: testData.maxTotalQueryLength}
@@ -1338,7 +1338,7 @@ func TestEngineQueryRequestRoundTripperHandler(t *testing.T) {
 		expectedPhysicalSamplesRead   uint64
 	}{
 		"range query": {
-			req:                           NewPrometheusRangeQueryRequest("/", requestHeaders, 1000, 7000, 2000, lookbackDelta, mustParseExpr(`5*some_metric`), requestOptions, requestHints, ""),
+			req:                           NewPrometheusRangeQueryRequest("/", requestHeaders, 1000, 7000, 2000, lookbackDelta, mustParseExpr(`5*some_metric`), requestOptions, requestHints, "", nil),
 			expectedSamplesProcessed:      4,
 			expectedPhysicalSamplesRead:   4,
 			expectedEquivalentSamplesRead: 4,
@@ -1366,7 +1366,7 @@ func TestEngineQueryRequestRoundTripperHandler(t *testing.T) {
 		},
 
 		"instant query": {
-			req:                           NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`5*some_metric`), requestOptions, requestHints, ""),
+			req:                           NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`5*some_metric`), requestOptions, requestHints, "", nil),
 			expectedSamplesProcessed:      1,
 			expectedPhysicalSamplesRead:   1,
 			expectedEquivalentSamplesRead: 1,
@@ -1391,7 +1391,7 @@ func TestEngineQueryRequestRoundTripperHandler(t *testing.T) {
 		},
 
 		"scalar result": {
-			req: NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`scalar(some_metric)`), requestOptions, requestHints, ""),
+			req: NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`scalar(some_metric)`), requestOptions, requestHints, "", nil),
 			expectedResponse: &PrometheusResponse{
 				Status: statusSuccess,
 				Data: &PrometheusData{
@@ -1413,7 +1413,7 @@ func TestEngineQueryRequestRoundTripperHandler(t *testing.T) {
 		},
 
 		"string result": {
-			req: NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`"foo"`), requestOptions, requestHints, ""),
+			req: NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`"foo"`), requestOptions, requestHints, "", nil),
 			expectedResponse: &PrometheusResponse{
 				Status: statusSuccess,
 				Data: &PrometheusData{
@@ -1435,12 +1435,12 @@ func TestEngineQueryRequestRoundTripperHandler(t *testing.T) {
 		},
 
 		"execution error": {
-			req:         NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`some_metric * on(foo) some_other_metric`), requestOptions, requestHints, ""),
+			req:         NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`some_metric * on(foo) some_other_metric`), requestOptions, requestHints, "", nil),
 			expectedErr: apierror.New(apierror.TypeExec, `found duplicate series for the match group {foo="bar"} on the right side of the operation at timestamp 1970-01-01T00:00:03Z: {__name__="some_other_metric", foo="bar", idx="0"} and {__name__="some_other_metric", foo="bar", idx="1"}`),
 		},
 
 		"annotations": {
-			req:                           NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`histogram_quantile(0.1, rate(some_metric[2s]))`), requestOptions, requestHints, ""),
+			req:                           NewPrometheusInstantQueryRequest("/", requestHeaders, 3000, lookbackDelta, mustParseExpr(`histogram_quantile(0.1, rate(some_metric[2s]))`), requestOptions, requestHints, "", nil),
 			expectedSamplesProcessed:      2,
 			expectedEquivalentSamplesRead: 2,
 			expectedPhysicalSamplesRead:   2,
@@ -1540,7 +1540,7 @@ func TestEngineQueryRequestRoundTripperHandler_ClosesQueryOnError(t *testing.T) 
 		},
 	}
 
-	req := NewPrometheusInstantQueryRequest("/", nil, util.TimeToMillis(end), lookbackDelta, parseQuery(t, "bar1"), requestoptions.Options{}, nil, "")
+	req := NewPrometheusInstantQueryRequest("/", nil, util.TimeToMillis(end), lookbackDelta, parseQuery(t, "bar1"), requestoptions.Options{}, nil, "", nil)
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
